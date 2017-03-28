@@ -1,0 +1,12 @@
+doctype html
+head
+  title Books template
+
+body
+  h1 Books
+
+  each book in books
+    h2: a(href="/book/" + book.bookId) #{book.title}
+    p.description= book.description
+    p.author= book.author
+    p.published= book.published

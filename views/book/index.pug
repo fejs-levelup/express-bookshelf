@@ -1,0 +1,53 @@
+doctype html
+head
+  title= book.title
+
+body
+  h1= book.title
+  p.description= book.description
+  p.author= book.author
+  p.published= book.published
+  img(src=book.cover)
+
+
+  .comments-container
+    if comments.length === 0
+      p No comments so far... Be the first!
+    else
+      each comment in comments
+        hr
+        p.comment-content
+          strong Comment: 
+          | #{comment.content}
+        p.comment-author
+          strong Author: 
+          | #{comment.author}
+
+  .comments-form
+    h3 Add your comment
+    form#new-comment(
+      action="/comment"
+      method="POST"
+    )
+      label(for="new-comment-content") Comment here:
+      textarea#new-comment-content(
+        name="new-comment-content"
+        required
+      )
+      br
+      label(for="new-comment-author") Author name:
+      input#new-comment-author(
+        type="text"
+        name="new-comment-author"
+        required
+      )
+      input#book-id(
+        value= book.bookId
+        type="hidden"
+      )
+      br
+      button Add comment
+
+  script(src="/js/book.js")
+
+
