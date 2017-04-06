@@ -12,7 +12,35 @@ const express = require("express"),
       cb(null, file.originalname)
     }
   }),
-  upload = multer({ storage });
+  upload = multer({ storage }),
+  mongodb = require("mongodb"),
+  dbClient = mongodb.MongoClient,
+  ObjectId = mongodb.ObjectId,
+  url = "mongodb://localhost:27017/express-bookshelf";
+
+let db = null;
+
+dbClient.connect(url, (err, database) => {
+  if(err) throw new Error(err);
+
+  console.log("Connected to db!");
+  db = database;
+
+  let booksCollection = db.collection("Books");
+
+  // booksCollection.insertOne(
+  //   { bookId: 0, title: "Some Book 1", description: "Some description", author: "Bob", published: 1999 },
+  //   function(err, data) {
+  //     if(err) {
+  //       console.log(err);
+  //       return;
+  //     }
+
+  //     console.log(data);
+  //   }
+  // );
+
+});
 
 let bookId = 2;
 let books = [
@@ -33,23 +61,42 @@ app.use(express.static("./public"));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-app.get("/", (req, res) => {
-  res.render("index", { books });
+app.get("/", (req, response) => {
+  let booksCollection = db.collection("Books");
+
+  booksCollection.find({}).toArray().
+    then(res => {
+      response.render("index", { books: res });
+    })
 });
 
 app.route("/book/:id").
   get((req, res) => {
-    let bookId = parseInt(req.params.id, 10);
+    let bookId = req.params.id;
 
-    let book = books.find(book => book.bookId === bookId);
+    // let book = books.find(book => book.bookId === bookId);
+    console.log(bookId);
+    db.collection("Books").findOne({ _id: ObjectId(bookId) }, function(err, book) {
+      if(err) {
+        res.status(400).send({ error: err });
+        return;
+      }
 
-    if(!book) {
-      return res.render("book/new", { id: bookId });
-    }
+      console.log(book);
 
-    let bookComments = comments.filter(comment => comment.bookId === bookId);
+      if(!book) {
+        return res.redirect("/new-book");
+      }
 
-    res.render("book/index", { book, comments: bookComments.reverse() });
+      let bookComments = comments.filter(comment => comment.bookId === bookId);
+
+      res.render("book/index", {
+        book,
+        comments: bookComments.reverse()
+      });
+    })
+
+    
   }).
   post(upload.single("cover"), (req, res) => {
     let id = parseInt(req.params.id, 10);
@@ -76,6 +123,32 @@ app.route("/book/:id").
     books.push(book);
 
     res.render("book/index", { book, comments: [] });
+  });
+
+app.route("/new-book")
+  .get((req, res) => {
+    res.render("book/new");
+  })
+  .post(upload.single("cover"), (req, res) => {
+    let {
+      title,
+      description,
+      author,
+      published,
+      __savedFile
+    } = req.body;
+
+    db.collection("Books").insertOne({
+      title, description, author, published, coverUrl: __savedFile
+    }, (err, book) => {
+      if(err) {
+        return res.satus(400).send({
+          error: "Unable to save book"
+        });
+      }
+
+      res.send({ status: "Ok" });
+    });
   });
 
 app.post("/comment", (req, res) => {

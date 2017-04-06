@@ -3,10 +3,13 @@ head
   title Books template
 
 body
+  nav
+    ul
+      li: a(href="/new-book") + New book
   h1 Books
 
   each book in books
-    h2: a(href="/book/" + book.bookId) #{book.title}
+    h2: a(href="/book/" + book._id) #{book.title}
     p.description= book.description
     p.author= book.author
     p.published= book.published
